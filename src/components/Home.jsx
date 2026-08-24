@@ -29,6 +29,9 @@ export default function Home({ onSelectMode }) {
         <button className="btn btn-primary" onClick={() => onSelectMode('multi-setup')}>
           👥 Duo
         </button>
+        <button className="btn btn-primary" onClick={() => onSelectMode('online-setup')}>
+          🌐 En ligne
+        </button>
       </div>
 
       <p className="rules">

@@ -3,11 +3,14 @@ import Home from './components/Home'
 import SoloGame from './components/SoloGame'
 import MultiplayerSetup from './components/MultiplayerSetup'
 import MultiplayerGame from './components/MultiplayerGame'
+import OnlineSetup from './components/OnlineSetup'
+import OnlineGame from './components/OnlineGame'
 import './App.css'
 
 export default function App() {
   const [screen, setScreen] = useState('home')
   const [players, setPlayers] = useState([])
+  const [online, setOnline] = useState(null) // { code, playerId }
 
   function goHome() {
     setScreen('home')
@@ -31,6 +34,20 @@ export default function App() {
 
       {screen === 'multi-game' && (
         <MultiplayerGame players={players} onExit={goHome} />
+      )}
+
+      {screen === 'online-setup' && (
+        <OnlineSetup
+          onExit={goHome}
+          onStart={(code, playerId) => {
+            setOnline({ code, playerId })
+            setScreen('online-game')
+          }}
+        />
+      )}
+
+      {screen === 'online-game' && online && (
+        <OnlineGame code={online.code} playerId={online.playerId} onExit={goHome} />
       )}
     </div>
   )
