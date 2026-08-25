@@ -90,6 +90,23 @@ export async function claimPoint(code, playerId, expectedConsumed) {
   return true
 }
 
+export async function rematchRoom(code) {
+  const roomRef = ref(db, `rooms/${code}`)
+  const snap = await get(roomRef)
+  const room = snap.val()
+  if (!room) return
+
+  const scoreResets = Object.fromEntries(
+    Object.keys(room.players).map((id) => [`players/${id}/score`, 0])
+  )
+  await update(roomRef, {
+    deck: shuffle(generateDobbleDeck(7)),
+    consumed: 0,
+    status: 'playing',
+    ...scoreResets,
+  })
+}
+
 export function leaveRoom(code) {
   return remove(ref(db, `rooms/${code}`)).catch(() => {})
 }

@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { listenToRoom, claimPoint, leaveRoom } from '../onlineRoom'
+import { listenToRoom, claimPoint, leaveRoom, rematchRoom } from '../onlineRoom'
 import { findCommonSymbol } from '../dobble'
 import { PLAYER_COLORS } from '../playerColors'
+import { DECOR_COLORS } from '../decorColors'
 import Card from './Card'
+
+const CONFETTI_COUNT = 18
 
 export default function OnlineGame({ code, playerId, onExit }) {
   const [room, setRoom] = useState(null)
@@ -21,6 +24,10 @@ export default function OnlineGame({ code, playerId, onExit }) {
   function handleExit() {
     if (room && room.status === 'finished') leaveRoom(code)
     onExit()
+  }
+
+  function handleRematch() {
+    rematchRoom(code)
   }
 
   if (!room) {
@@ -75,7 +82,20 @@ export default function OnlineGame({ code, playerId, onExit }) {
 
       {room.status === 'finished' && (
         <div className="overlay">
-          <h2>🏆 {ranked[0].name} gagne !</h2>
+          <div className="confetti" aria-hidden="true">
+            {Array.from({ length: CONFETTI_COUNT }, (_, i) => (
+              <span
+                key={i}
+                className="confetti-piece"
+                style={{
+                  left: `${(i * 97) % 100}%`,
+                  background: DECOR_COLORS[i % DECOR_COLORS.length],
+                  animationDelay: `${(i % 6) * 0.18}s`,
+                }}
+              />
+            ))}
+          </div>
+          <h2 className="winner-heading">🏆 {ranked[0].name} gagne !</h2>
           <ol className="final-ranking">
             {ranked.map((p, i) => (
               <li key={i} className={p.score === maxScore ? 'winner' : ''}>
@@ -83,7 +103,10 @@ export default function OnlineGame({ code, playerId, onExit }) {
               </li>
             ))}
           </ol>
-          <button className="btn btn-ghost" onClick={handleExit}>Accueil</button>
+          <div className="mode-buttons">
+            <button className="btn btn-primary" onClick={handleRematch}>Rejouer</button>
+            <button className="btn btn-ghost" onClick={handleExit}>Accueil</button>
+          </div>
         </div>
       )}
 
