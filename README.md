@@ -1,76 +1,81 @@
-# Dobble
+# Forme aérodynamique
 
-Une appli web (PWA) inspirée du jeu Dobble (Spot It!), faite avec React et Vite.
+Application Streamlit qui compare la traînée aérodynamique de formes simples dans l'air et permet d'explorer, avec un curseur, l'effet de l'élancement d'un corps sur son coefficient de traînée.
 
-Le principe : deux cartes quelconques du jeu partagent toujours exactement un seul symbole en commun. Il faut le repérer et cliquer sur ce symbole le plus vite possible. La génération des cartes suit le vrai principe mathématique du jeu (un plan projectif fini d'ordre 7), dans `src/dobble.js` : 57 cartes, 8 symboles par carte, et la propriété "un seul symbole en commun" garantie entre deux cartes quelconques.
+Projet d'apprentissage construit avec Claude Code. Les formules et les sources sont documentées dans l'application, section "Sources et limites".
 
-## Les trois modes de jeu
+## Ce que fait l'application
 
-**Solo contre la montre** (`src/components/SoloGame.jsx`) : le deck entier (57 cartes) est posé en pioche. Une carte "table" et une carte "pioche" sont affichées côte à côte, il faut cliquer sur leur symbole commun pour faire avancer la pioche. Un chrono tourne pendant toute la partie, l'objectif est de vider la pioche le plus vite possible.
+Tu entres trois paramètres dans la barre latérale :
 
-**Duo** (`src/components/MultiplayerSetup.jsx` et `MultiplayerGame.jsx`) : 2 joueurs sur le même écran, chacun a sa propre carte. Le premier qui clique le bon symbole sur SA carte marque le point, les deux cartes sont alors remplacées par les deux suivantes de la pioche. La partie se termine quand la pioche est épuisée, le joueur avec le plus de points gagne.
+- la vitesse de déplacement (km/h)
+- une taille caractéristique L de l'objet (m)
+- la température de l'air (°C)
 
-**En ligne** (`src/components/OnlineSetup.jsx` et `OnlineGame.jsx`) : 1v1 à distance. Un joueur crée une partie et obtient un code à 4 caractères, l'autre le rejoint avec ce code. La synchronisation passe par Firebase Realtime Database (`src/firebase.js`, `src/onlineRoom.js`) : la pioche est stockée côté serveur, et une transaction Firebase (`runTransaction`) départage qui a cliqué le bon symbole en premier en cas d'égalité de frappe.
+L'application calcule ensuite :
 
-Ce mode a besoin de clés Firebase. Sans elles, le bouton "En ligne" reste accessible mais affiche "Le mode en ligne n'est pas encore configuré." (voir `isFirebaseConfigured` dans `src/firebase.js`), les modes Solo et Duo fonctionnent sans aucune config.
+1. La densité de l'air (loi des gaz parfaits) et sa viscosité (loi de Sutherland), à partir de la température.
+2. Le nombre de Reynolds : `Re = ρ · v · L / µ`.
+3. Le coefficient de traînée Cx de chaque forme, selon le régime d'écoulement.
+4. La force de traînée : `F = 0,5 · ρ · v² · Cx · A`, et la puissance nécessaire `P = F · v`.
+5. Un graphique comparatif, avec la forme la plus aérodynamique mise en avant.
 
-## Lancer le projet
+Formes comparées : sphère, cylindre, cube, plaque plate, profilé en goutte d'eau. L'aire frontale est fixée à L² pour toutes les formes, afin de comparer à taille égale.
 
-```bash
-npm install
-npm run dev
+## Visualisation de l'écoulement
+
+Une section dédiée dessine la silhouette de la forme choisie, des lignes de courant autour, et une zone de sillage pour les formes non profilées.
+
+Ce n'est pas une simulation CFD. Les lignes de courant sont déformées géométriquement autour du profil, et la taille du sillage est illustrative. Elle sert à voir pourquoi un profilé traîne moins qu'un cube, pas à mesurer quoi que ce soit.
+
+## Explorateur d'élancement
+
+Un curseur (longueur/diamètre, de 0,2 à 8) fait varier en continu la silhouette d'un corps de révolution, du disque jusqu'à la goutte d'eau. Le diamètre maximal reste égal à L, donc l'aire frontale ne change pas, seule la longueur varie.
+
+Le Cx est interpolé en log-log entre trois ancrages documentés : disque ou plaque (Cx ≈ 1,17), sphère (corrélation de Morrison au Reynolds courant) et profilé (Cx ≈ 0,04 à élancement 8). Entre ces points, la valeur est une approximation, pas une mesure.
+
+## Qualité des données
+
+| Forme | Source du Cx | Statut |
+|---|---|---|
+| Sphère | Morrison (2013), corrélation continue de Stokes jusqu'à Re ≈ 10⁶, crise de traînée incluse | Corrélation documentée |
+| Cylindre, Re ≤ 2×10⁵ | Sucker & Brauer (1975) | Corrélation documentée |
+| Cylindre, Re > 2×10⁵ | Table approximative, raccordée sans discontinuité à Sucker & Brauer | Approximation |
+| Cube, plaque plate, profilé | Valeurs de plateau approximatives | Approximation |
+
+Références :
+
+- Morrison, F. A., *An Introduction to Fluid Mechanics*, Cambridge University Press, 2013.
+- Sucker, D. et Brauer, H., *Wärme- und Stoffübertragung*, vol. 8, 1975, p. 149-158.
+
+## Installation
+
+Python 3.10 ou plus récent est recommandé.
+
+```
+git clone https://github.com/Therm26/forme-aerodynamique.git
+cd forme-aerodynamique
+pip install streamlit numpy matplotlib
+streamlit run app.py
 ```
 
-L'appli démarre sur `http://localhost:5173` (port par défaut de Vite).
+L'application s'ouvre sur `http://localhost:8501`. Si un fichier `requirements.txt` est présent dans le dépôt, utilise `pip install -r requirements.txt` à la place.
 
-## Activer le mode en ligne (optionnel)
+## Limites connues
 
-1. Créer un projet Firebase sur [console.firebase.google.com](https://console.firebase.google.com), activer Realtime Database.
-2. Copier `.env.example` en `.env.local` et renseigner les clés :
+- Pas de simulation numérique de l'écoulement : les visualisations sont pédagogiques.
+- Trois formes sur cinq reposent sur des valeurs de Cx approximatives.
+- Le Cx de l'explorateur d'élancement est interpolé à partir de trois points seulement.
+- L'aire frontale est supposée égale à L² pour toutes les formes, ce qui n'est pas la vraie aire de la sphère ou du cylindre.
+- L'air est le seul fluide géré, à pression atmosphérique standard.
 
-```
-VITE_FIREBASE_API_KEY=...
-VITE_FIREBASE_AUTH_DOMAIN=...
-VITE_FIREBASE_DATABASE_URL=...
-VITE_FIREBASE_PROJECT_ID=...
-VITE_FIREBASE_APP_ID=...
-```
+## Pistes d'amélioration
 
-3. Redémarrer `npm run dev`.
+- Remplacer les tables approximatives du cube, de la plaque et du profilé par des corrélations sourcées.
+- Ajouter l'altitude (densité et viscosité de l'air variables).
+- Ajouter des unités impériales.
+- Proposer des formes 3D interactives.
 
-## Build et déploiement
+## Licence
 
-```bash
-npm run build    # génère le dossier dist/
-npm run preview  # pour tester le build en local
-```
-
-Le projet est prêt pour un déploiement sur Netlify (`netlify.toml` pointe déjà sur `npm run build` et le dossier `dist`). Si le site est déployé ailleurs que sur Netlify, penser à renseigner les variables `VITE_FIREBASE_*` dans les paramètres d'environnement de l'hébergeur pour que le mode en ligne fonctionne en prod.
-
-L'appli est installable comme PWA (icône sur l'écran d'accueil, mode standalone) grâce à `vite-plugin-pwa`, configuré dans `vite.config.js`.
-
-## Structure du projet
-
-```
-src/
-  dobble.js                     -> génération du deck et recherche du symbole commun
-  symbols.js                    -> les 57 emojis utilisés
-  firebase.js, onlineRoom.js    -> connexion et logique des parties en ligne
-  decorColors.js, playerColors.js -> couleurs de l'interface et des joueurs
-  components/
-    Home.jsx                    -> écran d'accueil, choix du mode
-    Card.jsx                    -> affichage d'une carte (disposition circulaire des symboles)
-    SoloGame.jsx                -> mode solo
-    MultiplayerSetup.jsx        -> saisie des noms avant une partie Duo
-    MultiplayerGame.jsx         -> mode Duo
-    OnlineSetup.jsx             -> création/connexion à une partie en ligne
-    OnlineGame.jsx              -> mode en ligne
-```
-
-## Lint
-
-```bash
-npm run lint
-```
-
-Utilise [oxlint](https://oxc.rs), configuré dans `.oxlintrc.json`.
+À définir.
